@@ -78,11 +78,12 @@ fn auto_sync(dir: &Path, state: &State) {
     };
     state.set_roots(&roots);
 
+    let tdir = store::tantivy_dir(dir);
     let mut attempt = 1;
     let mut result = builder::sync_all(state, |_| {});
     while result.is_err() && attempt < SYNC_MAX_ATTEMPTS {
         attempt += 1;
-        let _ = builder::recreate_writer(state);
+        let _ = builder::recreate_writer(state, &tdir);
         result = builder::sync_all(state, |_| {});
     }
     match result {

@@ -12,7 +12,7 @@ use std::collections::{HashMap, HashSet};
 use std::path::Path;
 use std::sync::mpsc;
 use std::sync::Arc;
-use std::time::Duration;
+use std::time::{Duration, Instant};
 use tantivy::schema::Value;
 use tantivy::tokenizer::{PreTokenizedString, Token};
 use tantivy::{DocAddress, TantivyDocument, Term};
@@ -136,7 +136,7 @@ pub fn build_root<F: Fn(u64) + Sync>(
                 w.delete_term(Term::from_field_text(fields.path, &path));
                 w.add_document(make_doc(&fields, &path, &enc_owned, mt, tris))?;
                 n += 1;
-                if n.is_multiple_of(20000) {
+                if n.is_multiple_of(5000) {
                     progress(n);
                 }
             }
@@ -340,16 +340,40 @@ pub fn update_path(state: &State, path: &Path) {
 /// transient io errors (e.g. antivirus touching the index files) and retry a build.
 ///
 /// The old writer is dropped BEFORE the new one is created. On Windows, Tantivy holds an
-/// exclusive file lock (.tantivy-writer.lock) for the lifetime of the IndexWriter. If the old
-/// writer is still alive when writer_with_num_threads() runs, the new lock acquisition hangs
-/// indefinitely. Dropping first (setting to None) releases that lock, then we sleep to let AV
-/// finish with the segment files before creating the new writer.
-pub fn recreate_writer(state: &State) -> Result<()> {
+/// exclusive file lock (.tantivy-writer.lock) for the lifetime of the IndexWriter. writer_with_num_threads()
+/// blocks indefinitely in Tantivy's blocking-lock mode if AV holds the lock file open. To avoid
+/// this hang, we probe the lock file directly (exponential backoff, 30s timeout) and only call
+/// writer_with_num_threads() once the file is accessible. Returns Err if still locked after 30s —
+/// the caller should skip the current root and advise the user to run `indexify sync`.
+pub fn recreate_writer(state: &State, tantivy_dir: &Path) -> Result<()> {
     {
         let mut guard = state.writer.lock().unwrap();
         *guard = None; // drop old writer → releases Tantivy's directory-level lock
     }
-    std::thread::sleep(Duration::from_millis(600)); // let AV finish touching the index files
+
+    // Probe .tantivy-writer.lock before calling writer_with_num_threads().
+    // If AV has the file open with exclusive access, our probe fails immediately (no blocking).
+    // We retry with exponential backoff rather than calling the blocking Tantivy API directly.
+    let lock_path = tantivy_dir.join(".tantivy-writer.lock");
+    let mut delay_ms = 600u64;
+    let deadline = Instant::now() + Duration::from_secs(30);
+    loop {
+        std::thread::sleep(Duration::from_millis(delay_ms));
+        match std::fs::OpenOptions::new().write(true).create(true).open(&lock_path) {
+            Ok(_) => break, // accessible; _file dropped immediately — tiny TOCTOU window before Tantivy opens it
+            Err(_) if Instant::now() < deadline => {
+                eprintln!("  waiting for writer lock (antivirus may be scanning)…");
+                delay_ms = (delay_ms * 2).min(5000);
+            }
+            Err(e) => {
+                return Err(anyhow!(
+                    "writer lock unavailable after 30s ({e}); \
+                    exclude .indexify/tantivy from antivirus, then run `indexify sync`"
+                ));
+            }
+        }
+    }
+
     let w = state
         .index
         .writer_with_num_threads::<TantivyDocument>(1, WRITER_HEAP_BYTES)?;

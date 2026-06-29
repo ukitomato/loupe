@@ -15,7 +15,8 @@ pub fn run(index_dir: Option<&str>) -> Result<()> {
         bail!("no index at {}. Run `indexify build` first.", dir.display());
     }
     let roots = store::resolved_roots(&dir)?;
-    let state = open_state(&store::tantivy_dir(&dir))?;
+    let tdir = store::tantivy_dir(&dir);
+    let state = open_state(&tdir)?;
     state.set_roots(&roots);
 
     let t0 = Instant::now();
@@ -26,7 +27,7 @@ pub fn run(index_dir: Option<&str>) -> Result<()> {
     while result.is_err() && attempt < MAX_ATTEMPTS {
         attempt += 1;
         eprintln!("  retrying (attempt {attempt})…");
-        let _ = builder::recreate_writer(&state);
+        let _ = builder::recreate_writer(&state, &tdir);
         result = builder::sync_all(&state, progress);
     }
     let stats = result?;

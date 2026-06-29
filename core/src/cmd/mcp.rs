@@ -261,7 +261,7 @@ impl McpServer {
         let mut total = 0u64;
         for (abs, enc) in &roots {
             let rs = abs.to_string_lossy().into_owned();
-            match build_retry(&state, &rs, enc) {
+            match build_retry(&state, &rs, enc, &tdir) {
                 Ok(n) => total += n,
                 Err(e) => return text_result(format!("build error on {rs}: {e}"), true),
             }
@@ -291,12 +291,13 @@ impl McpServer {
             Err(e) => return text_result(format!("error opening index: {e}"), true),
         };
         state.set_roots(&roots);
+        let tdir = store::tantivy_dir(&self.dir);
         let t0 = Instant::now();
         let mut result = builder::sync_all(&state, |_| {});
         let mut attempt = 1;
         while result.is_err() && attempt < BUILD_MAX_ATTEMPTS {
             attempt += 1;
-            result = builder::recreate_writer(&state)
+            result = builder::recreate_writer(&state, &tdir)
                 .and_then(|_| builder::sync_all(&state, |_| {}));
         }
         match result {
@@ -383,14 +384,14 @@ impl McpServer {
     }
 }
 
-fn build_retry(state: &State, root: &str, enc: &str) -> Result<u64> {
+fn build_retry(state: &State, root: &str, enc: &str, tantivy_dir: &Path) -> Result<u64> {
     let mut attempt = 0;
     loop {
         attempt += 1;
         match builder::build_root(state, root, enc, |_| {}) {
             Ok(n) => return Ok(n),
             Err(_) if attempt < BUILD_MAX_ATTEMPTS => {
-                builder::recreate_writer(state)?;
+                builder::recreate_writer(state, tantivy_dir)?;
             }
             Err(e) => return Err(e),
         }
