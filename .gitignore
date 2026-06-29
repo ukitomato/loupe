@@ -7,6 +7,10 @@ out/
 *.vsix
 .vscode-test/
 
+# VitePress build & dev cache (source files in .vitepress/ are committed)
+web/.vitepress/dist/
+web/.vitepress/cache/
+
 # Native binaries are build output, not source: produced by `cargo build` / cargo-dist Releases and
 # staged into the extension by CI before `vsce package`. Never committed (matches bin/ at any level).
 bin/
