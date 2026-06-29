@@ -19,7 +19,7 @@ use anyhow::Result;
 use serde_json::{json, Value};
 use std::io::{BufRead, Write};
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{mpsc, Arc};
 use std::time::Instant;
 
 use crate::index::searcher::Hit;
@@ -35,6 +35,7 @@ pub fn run(index_dir: Option<&str>) -> Result<()> {
     let mut server = McpServer {
         dir: store::resolve_index_dir(index_dir),
         state: None,
+        watcher_stop: None,
     };
     let stdin = std::io::stdin();
     let mut out = std::io::stdout();
@@ -69,6 +70,7 @@ fn write_msg(out: &mut std::io::Stdout, v: &Value) {
 struct McpServer {
     dir: std::path::PathBuf,
     state: Option<Arc<State>>,
+    watcher_stop: Option<mpsc::SyncSender<()>>,
 }
 
 impl McpServer {
@@ -80,12 +82,20 @@ impl McpServer {
             if let Ok(roots) = store::resolved_roots(&self.dir) {
                 if !roots.is_empty() {
                     s.set_roots(&roots);
-                    let _ = start_watcher(s.clone());
+                    self.replace_watcher(&s);
                 }
             }
             self.state = Some(s);
         }
         Ok(self.state.clone().unwrap())
+    }
+
+    /// Stop the current watcher (if any) and start a fresh one for the given state.
+    fn replace_watcher(&mut self, state: &Arc<State>) {
+        if let Some(stop) = self.watcher_stop.take() {
+            let _ = stop.send(());
+        }
+        self.watcher_stop = start_watcher(state.clone()).ok();
     }
 
     /// Returns Some(response) for requests; None for notifications.
@@ -258,6 +268,7 @@ impl McpServer {
         }
         let secs = t0.elapsed().as_secs_f64();
         self.update_meta(&state, true);
+        self.replace_watcher(&state);
         text_result(format!("built {total} files in {secs:.1}s"), false)
     }
 
@@ -292,6 +303,7 @@ impl McpServer {
             Ok(stats) => {
                 let secs = t0.elapsed().as_secs_f64();
                 self.update_meta(&state, false);
+                self.replace_watcher(&state);
                 text_result(
                     format!(
                         "synced: {} updated, {} removed in {secs:.1}s",

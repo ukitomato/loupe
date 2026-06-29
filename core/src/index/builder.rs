@@ -31,14 +31,31 @@ fn is_binary(bytes: &[u8]) -> bool {
 /// trigrams stay the more selective term for >=3-char queries. Both lengths live in the same
 /// field — a 2-char and a 3-char term never collide — and the field is `IndexRecordOption::Basic`
 /// (no positions/freqs), so adding bigrams costs only modest extra index size.
-fn distinct_ngrams(lc: &str) -> Vec<String> {
-    let chars: Vec<char> = lc.chars().collect();
+///
+/// Implemented as a sliding window over the char iterator (O(1) extra space) to avoid
+/// collecting all characters into a Vec<char> (O(N)) and avoid a separate to_ascii_lowercase()
+/// copy. Lowercasing is applied per-character inline.
+fn distinct_ngrams(text: &str) -> Vec<String> {
     let mut set = HashSet::new();
-    for w in chars.windows(2) {
-        set.insert(w.iter().collect::<String>());
-    }
-    for w in chars.windows(3) {
-        set.insert(w.iter().collect::<String>());
+    let mut prev2 = '\0';
+    let mut prev1 = '\0';
+    for (i, c) in text.chars().enumerate() {
+        let c = c.to_ascii_lowercase();
+        if i >= 1 {
+            let mut s = String::with_capacity(8);
+            s.push(prev1);
+            s.push(c);
+            set.insert(s);
+        }
+        if i >= 2 {
+            let mut s = String::with_capacity(12);
+            s.push(prev2);
+            s.push(prev1);
+            s.push(c);
+            set.insert(s);
+        }
+        prev2 = prev1;
+        prev1 = c;
     }
     set.into_iter().collect()
 }
@@ -93,7 +110,7 @@ fn file_meta(path: &Path, enc: &'static encoding_rs::Encoding) -> Option<(u64, V
         return None;
     }
     let (text, _, _) = enc.decode(&bytes);
-    Some((mt, distinct_ngrams(&text.to_ascii_lowercase())))
+    Some((mt, distinct_ngrams(text.as_ref())))
 }
 
 /// Full (re)build over a single root. Parallel walk produces trigrams; one consumer adds docs.
@@ -106,7 +123,7 @@ pub fn build_root<F: Fn(u64) + Sync>(
     let enc = crate::encoding::enc_by_name(enc_name);
     let fields = state.fields;
     let enc_owned = enc_name.to_string();
-    let (tx, rx) = mpsc::channel::<(String, u64, Vec<String>)>();
+    let (tx, rx) = mpsc::sync_channel::<(String, u64, Vec<String>)>(64);
 
     let writer_mutex = &state.writer;
     let total = std::thread::scope(|scope| -> Result<u64> {
@@ -182,11 +199,6 @@ fn load_index_mtimes(state: &State) -> Result<HashMap<String, u64>> {
     Ok(map)
 }
 
-enum SyncMsg {
-    Seen(String),
-    Doc(String, String, u64, Vec<String>), // path, enc_name, mtime, trigrams
-}
-
 /// Outcome of a sync pass.
 pub struct SyncStats {
     pub updated: u64,
@@ -195,6 +207,10 @@ pub struct SyncStats {
 
 /// Catch-up sync against the configured roots: reindex new/changed files (by mtime),
 /// delete index entries whose files are gone.
+///
+/// The walker sends only new/changed files through a bounded channel (backpressure).
+/// Deletion detection is done after the walk by checking Path::exists() — this avoids
+/// accumulating all 300K paths in a `seen` HashSet.
 pub fn sync_all<F: Fn(u64) + Sync>(state: &State, progress: F) -> Result<SyncStats> {
     let roots_snapshot: Vec<(String, &'static encoding_rs::Encoding)> = state
         .roots
@@ -207,32 +223,26 @@ pub fn sync_all<F: Fn(u64) + Sync>(state: &State, progress: F) -> Result<SyncSta
     let fields = state.fields;
     let writer_mutex = &state.writer;
     let indexed_consumer = indexed.clone();
-    let (tx, rx) = mpsc::channel::<SyncMsg>();
+    // Bounded channel: only changed files are sent; backpressure keeps memory bounded.
+    let (tx, rx) = mpsc::sync_channel::<(String, String, u64, Vec<String>)>(64);
 
     let res = std::thread::scope(|scope| -> Result<(u64, u64)> {
         let consumer = scope.spawn(|| -> Result<(u64, u64)> {
             let w = writer_mutex.lock().unwrap();
-            let mut seen: HashSet<String> = HashSet::new();
             let mut updated = 0u64;
-            for msg in rx {
-                match msg {
-                    SyncMsg::Seen(p) => {
-                        seen.insert(p);
-                    }
-                    SyncMsg::Doc(p, enc_name, mt, tris) => {
-                        w.delete_term(Term::from_field_text(fields.path, &p));
-                        w.add_document(make_doc(&fields, &p, &enc_name, mt, tris))?;
-                        seen.insert(p);
-                        updated += 1;
-                        if updated.is_multiple_of(5000) {
-                            progress(updated);
-                        }
-                    }
+            for (p, enc_name, mt, tris) in rx {
+                w.delete_term(Term::from_field_text(fields.path, &p));
+                w.add_document(make_doc(&fields, &p, &enc_name, mt, tris))?;
+                updated += 1;
+                if updated.is_multiple_of(5000) {
+                    progress(updated);
                 }
             }
+            // Deletion: remove index entries for files that no longer exist on disk.
+            // Files that exist but are now too large or binary stay in the index as-is.
             let mut removed = 0u64;
             for p in indexed_consumer.keys() {
-                if !seen.contains(p) {
+                if !Path::new(p).exists() {
                     w.delete_term(Term::from_field_text(fields.path, p));
                     removed += 1;
                 }
@@ -255,28 +265,22 @@ pub fn sync_all<F: Fn(u64) + Sync>(state: &State, progress: F) -> Result<SyncSta
                             let path = entry.path();
                             let pathstr = path.to_string_lossy().into_owned();
                             if let Ok(meta) = std::fs::metadata(path) {
-                                if meta.len() > MAX_FILE_BYTES {
-                                    let _ = tx.send(SyncMsg::Seen(pathstr));
-                                } else {
-                                    let mt = file_mtime_ms(&meta);
-                                    match indexed.get(&pathstr) {
-                                        Some(&old) if old == mt => {
-                                            let _ = tx.send(SyncMsg::Seen(pathstr));
-                                        }
-                                        _ => match file_meta(path, enc) {
-                                            Some((mt2, tris)) => {
-                                                let _ = tx.send(SyncMsg::Doc(
-                                                    pathstr,
-                                                    enc_name.clone(),
-                                                    mt2,
-                                                    tris,
-                                                ));
-                                            }
-                                            None => {
-                                                let _ = tx.send(SyncMsg::Seen(pathstr));
-                                            }
-                                        },
+                                let mt = file_mtime_ms(&meta);
+                                // Skip if already indexed at this exact mtime (and within size
+                                // limit, so file_meta would produce the same n-grams).
+                                let is_current = meta.len() <= MAX_FILE_BYTES
+                                    && indexed.get(&pathstr).copied() == Some(mt);
+                                if !is_current {
+                                    if let Some((mt2, tris)) = file_meta(path, enc) {
+                                        let _ = tx.send((
+                                            pathstr,
+                                            enc_name.clone(),
+                                            mt2,
+                                            tris,
+                                        ));
                                     }
+                                    // Too-large or binary: file_meta returns None → nothing sent.
+                                    // Path::exists() in the consumer keeps the index entry alive.
                                 }
                             }
                         }

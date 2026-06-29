@@ -12,7 +12,7 @@ use std::sync::{Arc, Mutex};
 use tantivy::tokenizer::{NgramTokenizer, TextAnalyzer};
 use tantivy::{Index, IndexReader, IndexWriter, ReloadPolicy, TantivyDocument};
 
-pub const WRITER_HEAP_BYTES: usize = 400_000_000;
+pub const WRITER_HEAP_BYTES: usize = 100_000_000;
 
 /// Everything needed to build/search the index, shared across threads.
 pub struct State {

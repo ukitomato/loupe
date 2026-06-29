@@ -18,7 +18,7 @@
 use anyhow::Result;
 use std::io::{BufRead, Write};
 use std::path::Path;
-use std::sync::Arc;
+use std::sync::{mpsc, Arc};
 use std::time::Instant;
 
 use crate::index::{builder, open_state, searcher, State};
@@ -33,6 +33,10 @@ pub fn run(index_dir: Option<&str>) -> Result<()> {
     let state = open_state(&store::tantivy_dir(&dir))?;
     emit(serde_json::json!({ "type": "ready" }));
 
+    // Stop sender for the active file watcher. Replaced on each build/sync/watch command;
+    // the old watcher thread receives the signal and exits before the new one starts.
+    let mut watcher_stop: Option<mpsc::SyncSender<()>> = None;
+
     let stdin = std::io::stdin();
     for line in stdin.lock().lines() {
         let line = line?;
@@ -46,7 +50,7 @@ pub fn run(index_dir: Option<&str>) -> Result<()> {
                 continue;
             }
         };
-        match handle_cmd(&state, &dir, &req) {
+        match handle_cmd(&state, &dir, &req, &mut watcher_stop) {
             Ok(true) => break,
             Ok(false) => {}
             Err(e) => emit(serde_json::json!({ "type": "error", "message": e.to_string() })),
@@ -73,7 +77,20 @@ fn update_meta(dir: &Path, state: &State, built: bool) {
     let _ = store::save_meta(dir, &meta);
 }
 
-fn handle_cmd(state: &Arc<State>, dir: &Path, req: &serde_json::Value) -> Result<bool> {
+/// Stop the current watcher (if any) and start a new one, storing the stop handle.
+fn replace_watcher(state: &Arc<State>, watcher_stop: &mut Option<mpsc::SyncSender<()>>) {
+    if let Some(stop) = watcher_stop.take() {
+        let _ = stop.send(());
+    }
+    *watcher_stop = start_watcher(state.clone()).ok();
+}
+
+fn handle_cmd(
+    state: &Arc<State>,
+    dir: &Path,
+    req: &serde_json::Value,
+    watcher_stop: &mut Option<mpsc::SyncSender<()>>,
+) -> Result<bool> {
     let id = req.get("id").cloned().unwrap_or(serde_json::Value::Null);
     match req.get("cmd").and_then(|v| v.as_str()) {
         Some("build") => {
@@ -108,7 +125,7 @@ fn handle_cmd(state: &Arc<State>, dir: &Path, req: &serde_json::Value) -> Result
             let ms = t0.elapsed().as_millis() as u64;
             update_meta(dir, state, true);
             emit(serde_json::json!({ "id": id, "type": "built", "files": total, "ms": ms }));
-            let _ = start_watcher(state.clone());
+            replace_watcher(state, watcher_stop);
             Ok(false)
         }
         Some("sync") => {
@@ -131,7 +148,7 @@ fn handle_cmd(state: &Arc<State>, dir: &Path, req: &serde_json::Value) -> Result
             emit(
                 serde_json::json!({ "id": id, "type": "synced", "updated": stats.updated, "removed": stats.removed, "ms": ms }),
             );
-            let _ = start_watcher(state.clone());
+            replace_watcher(state, watcher_stop);
             Ok(false)
         }
         Some("search") => {
@@ -156,7 +173,7 @@ fn handle_cmd(state: &Arc<State>, dir: &Path, req: &serde_json::Value) -> Result
             if let Ok(roots) = store::resolved_roots(dir) {
                 state.set_roots(&roots);
             }
-            let _ = start_watcher(state.clone());
+            replace_watcher(state, watcher_stop);
             emit(serde_json::json!({ "id": id, "type": "watching" }));
             Ok(false)
         }
