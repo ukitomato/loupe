@@ -60,8 +60,10 @@ pub fn start_watcher(state: Arc<State>) -> Result<mpsc::SyncSender<()>> {
             for p in pending.drain() {
                 builder::update_path(&state, &p);
             }
-            if let Ok(mut w) = state.writer.lock() {
-                let _ = w.commit();
+            if let Ok(mut guard) = state.writer.lock() {
+                if let Some(w) = guard.as_mut() {
+                    let _ = w.commit();
+                }
             }
             let _ = state.reader.reload(); // reflect incremental updates in searches
         }

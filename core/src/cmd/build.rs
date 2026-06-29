@@ -61,7 +61,7 @@ fn build_one(state: &crate::index::State, root: &str, enc: &str, t0: &Instant) -
             Ok(n) => return Ok(n),
             Err(e) if attempt < MAX_ATTEMPTS => {
                 eprintln!("  retrying (attempt {attempt}) after error: {e}");
-                let _ = builder::recreate_writer(state);
+                builder::recreate_writer(state)?;
             }
             Err(e) => return Err(e),
         }

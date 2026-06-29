@@ -17,7 +17,7 @@ pub const WRITER_HEAP_BYTES: usize = 100_000_000;
 /// Everything needed to build/search the index, shared across threads.
 pub struct State {
     pub index: Index,
-    pub writer: Mutex<IndexWriter>,
+    pub writer: Mutex<Option<IndexWriter>>,
     pub reader: IndexReader,
     pub fields: Fields,
     /// (root prefix, encoding) pairs, used by sync and the watcher to decode changed files.
@@ -41,7 +41,7 @@ pub fn open_state(tantivy_dir: &Path) -> Result<Arc<State>> {
         .try_into()?;
     Ok(Arc::new(State {
         index,
-        writer: Mutex::new(writer),
+        writer: Mutex::new(Some(writer)),
         reader,
         fields,
         roots: Mutex::new(Vec::new()),

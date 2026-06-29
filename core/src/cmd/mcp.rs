@@ -296,8 +296,8 @@ impl McpServer {
         let mut attempt = 1;
         while result.is_err() && attempt < BUILD_MAX_ATTEMPTS {
             attempt += 1;
-            let _ = builder::recreate_writer(&state);
-            result = builder::sync_all(&state, |_| {});
+            result = builder::recreate_writer(&state)
+                .and_then(|_| builder::sync_all(&state, |_| {}));
         }
         match result {
             Ok(stats) => {
@@ -390,7 +390,7 @@ fn build_retry(state: &State, root: &str, enc: &str) -> Result<u64> {
         match builder::build_root(state, root, enc, |_| {}) {
             Ok(n) => return Ok(n),
             Err(_) if attempt < BUILD_MAX_ATTEMPTS => {
-                let _ = builder::recreate_writer(state);
+                builder::recreate_writer(state)?;
             }
             Err(e) => return Err(e),
         }

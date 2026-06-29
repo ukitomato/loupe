@@ -116,7 +116,7 @@ fn handle_cmd(
                             emit(
                                 serde_json::json!({ "id": id, "type": "progress", "message": format!("retrying build (attempt {attempt}) after error: {e}") }),
                             );
-                            let _ = builder::recreate_writer(state);
+                            builder::recreate_writer(state)?;
                         }
                         Err(e) => return Err(e),
                     }
@@ -139,8 +139,8 @@ fn handle_cmd(
             let mut attempt = 1;
             while result.is_err() && attempt < MAX_ATTEMPTS {
                 attempt += 1;
-                let _ = builder::recreate_writer(state);
-                result = builder::sync_all(state, prog);
+                result = builder::recreate_writer(state)
+                    .and_then(|_| builder::sync_all(state, prog));
             }
             let stats = result?;
             let ms = t0.elapsed().as_millis() as u64;

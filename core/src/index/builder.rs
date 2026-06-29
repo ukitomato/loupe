@@ -128,7 +128,8 @@ pub fn build_root<F: Fn(u64) + Sync>(
     let writer_mutex = &state.writer;
     let total = std::thread::scope(|scope| -> Result<u64> {
         let consumer = scope.spawn(|| -> Result<u64> {
-            let w = writer_mutex.lock().unwrap();
+            let guard = writer_mutex.lock().unwrap();
+            let w = guard.as_ref().expect("writer not initialized");
             let mut n = 0u64;
             for (path, mt, tris) in rx {
                 // delete any existing doc for this path (safe for re-builds), then add
@@ -163,7 +164,7 @@ pub fn build_root<F: Fn(u64) + Sync>(
         consumer.join().map_err(|_| anyhow!("consumer panicked"))?
     })?;
 
-    state.writer.lock().unwrap().commit()?;
+    state.writer.lock().unwrap().as_mut().unwrap().commit()?;
     state.reader.reload()?; // make committed docs visible to searches immediately
     Ok(total)
 }
@@ -228,7 +229,8 @@ pub fn sync_all<F: Fn(u64) + Sync>(state: &State, progress: F) -> Result<SyncSta
 
     let res = std::thread::scope(|scope| -> Result<(u64, u64)> {
         let consumer = scope.spawn(|| -> Result<(u64, u64)> {
-            let w = writer_mutex.lock().unwrap();
+            let guard = writer_mutex.lock().unwrap();
+            let w = guard.as_ref().expect("writer not initialized");
             let mut updated = 0u64;
             for (p, enc_name, mt, tris) in rx {
                 w.delete_term(Term::from_field_text(fields.path, &p));
@@ -295,7 +297,7 @@ pub fn sync_all<F: Fn(u64) + Sync>(state: &State, progress: F) -> Result<SyncSta
             .map_err(|_| anyhow!("sync consumer panicked"))?
     })?;
 
-    state.writer.lock().unwrap().commit()?;
+    state.writer.lock().unwrap().as_mut().unwrap().commit()?;
     state.reader.reload()?;
     Ok(SyncStats {
         updated: res.0,
@@ -317,29 +319,41 @@ pub fn update_path(state: &State, path: &Path) {
         None => return, // not under a watched root
     };
     let path_str = path.to_string_lossy().into_owned();
-    let w = state.writer.lock().unwrap();
-    w.delete_term(Term::from_field_text(state.fields.path, &path_str));
-    if path.is_file() {
-        if let Some((mt, tris)) = file_meta(path, enc) {
-            let _ = w.add_document(make_doc(
-                &state.fields,
-                &path_str,
-                enc_name_of(enc),
-                mt,
-                tris,
-            ));
+    let guard = state.writer.lock().unwrap();
+    if let Some(w) = guard.as_ref() {
+        w.delete_term(Term::from_field_text(state.fields.path, &path_str));
+        if path.is_file() {
+            if let Some((mt, tris)) = file_meta(path, enc) {
+                let _ = w.add_document(make_doc(
+                    &state.fields,
+                    &path_str,
+                    enc_name_of(enc),
+                    mt,
+                    tris,
+                ));
+            }
         }
     }
 }
 
-/// Replace the (possibly poisoned) IndexWriter with a fresh one — used to recover from
+/// Replace the (possibly killed) IndexWriter with a fresh one — used to recover from
 /// transient io errors (e.g. antivirus touching the index files) and retry a build.
+///
+/// The old writer is dropped BEFORE the new one is created. On Windows, Tantivy holds an
+/// exclusive file lock (.tantivy-writer.lock) for the lifetime of the IndexWriter. If the old
+/// writer is still alive when writer_with_num_threads() runs, the new lock acquisition hangs
+/// indefinitely. Dropping first (setting to None) releases that lock, then we sleep to let AV
+/// finish with the segment files before creating the new writer.
 pub fn recreate_writer(state: &State) -> Result<()> {
+    {
+        let mut guard = state.writer.lock().unwrap();
+        *guard = None; // drop old writer → releases Tantivy's directory-level lock
+    }
     std::thread::sleep(Duration::from_millis(600)); // let AV finish touching the index files
     let w = state
         .index
         .writer_with_num_threads::<TantivyDocument>(1, WRITER_HEAP_BYTES)?;
-    *state.writer.lock().unwrap() = w;
+    *state.writer.lock().unwrap() = Some(w);
     Ok(())
 }
 
