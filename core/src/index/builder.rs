@@ -274,12 +274,7 @@ pub fn sync_all<F: Fn(u64) + Sync>(state: &State, progress: F) -> Result<SyncSta
                                     && indexed.get(&pathstr).copied() == Some(mt);
                                 if !is_current {
                                     if let Some((mt2, tris)) = file_meta(path, enc) {
-                                        let _ = tx.send((
-                                            pathstr,
-                                            enc_name.clone(),
-                                            mt2,
-                                            tris,
-                                        ));
+                                        let _ = tx.send((pathstr, enc_name.clone(), mt2, tris));
                                     }
                                     // Too-large or binary: file_meta returns None → nothing sent.
                                     // Path::exists() in the consumer keeps the index entry alive.
@@ -359,7 +354,12 @@ pub fn recreate_writer(state: &State, tantivy_dir: &Path) -> Result<()> {
     let deadline = Instant::now() + Duration::from_secs(30);
     loop {
         std::thread::sleep(Duration::from_millis(delay_ms));
-        match std::fs::OpenOptions::new().write(true).create(true).open(&lock_path) {
+        match std::fs::OpenOptions::new()
+            .write(true)
+            .create(true)
+            .truncate(false)
+            .open(&lock_path)
+        {
             Ok(_) => break, // accessible; _file dropped immediately — tiny TOCTOU window before Tantivy opens it
             Err(_) if Instant::now() < deadline => {
                 eprintln!("  waiting for writer lock (antivirus may be scanning)…");

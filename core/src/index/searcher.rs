@@ -125,7 +125,10 @@ pub fn search(
         } else {
             regex::Regex::new(&format!("(?i){query}"))?
         };
-        (ngrams_of(runs.iter().map(|s| s.as_str())), Verifier::Regex(re))
+        (
+            ngrams_of(runs.iter().map(|s| s.as_str())),
+            Verifier::Regex(re),
+        )
     } else {
         let needle = query.to_ascii_lowercase();
         if needle.chars().count() < 2 {
@@ -360,8 +363,9 @@ mod tests {
     #[test]
     fn ngrams_of_mixed_lengths_across_strings() {
         // a 2-char run gives a bigram; a >=3-char run gives trigrams; unioned
-        let g: std::collections::HashSet<_> =
-            ngrams_of(["ab", "wxyz"].iter().copied()).into_iter().collect();
+        let g: std::collections::HashSet<_> = ngrams_of(["ab", "wxyz"].iter().copied())
+            .into_iter()
+            .collect();
         assert!(g.contains("ab"));
         assert!(g.contains("wxy"));
         assert!(g.contains("xyz"));

@@ -14,7 +14,9 @@ fn substring_case_insensitive() {
     let ws = Workspace::new("utf-8");
     ws.write("a.txt", b"calculateTotal(x, y)");
     ws.build("utf-8");
-    let hits = search(&ws.state, "calculatetotal", false, 300, false).unwrap().hits;
+    let hits = search(&ws.state, "calculatetotal", false, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "a.txt", 1);
 }
 
@@ -23,7 +25,9 @@ fn substring_case_insensitive_uppercase_query() {
     let ws = Workspace::new("utf-8");
     ws.write("a.txt", b"calculateTotal(x, y)");
     ws.build("utf-8");
-    let hits = search(&ws.state, "CALCULATETOTAL", false, 300, false).unwrap().hits;
+    let hits = search(&ws.state, "CALCULATETOTAL", false, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "a.txt", 1);
 }
 
@@ -32,7 +36,9 @@ fn substring_case_sensitive_match() {
     let ws = Workspace::new("utf-8");
     ws.write("a.txt", b"calculateTotal(x, y)");
     ws.build("utf-8");
-    let hits = search(&ws.state, "calculateTotal", false, 300, true).unwrap().hits;
+    let hits = search(&ws.state, "calculateTotal", false, 300, true)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "a.txt", 1);
 }
 
@@ -41,7 +47,9 @@ fn substring_case_sensitive_no_match_wrong_case() {
     let ws = Workspace::new("utf-8");
     ws.write("a.txt", b"calculateTotal(x, y)");
     ws.build("utf-8");
-    let hits = search(&ws.state, "CALCULATETOTAL", false, 300, true).unwrap().hits;
+    let hits = search(&ws.state, "CALCULATETOTAL", false, 300, true)
+        .unwrap()
+        .hits;
     assert!(hits.is_empty());
 }
 
@@ -166,7 +174,9 @@ fn shift_jis_japanese_query_hits() {
     let content = to_shift_jis("検索テスト用ファイル\nマッチすべき行\n");
     ws.write("sjis.cbl", &content);
     ws.build("shift_jis");
-    let hits = search(&ws.state, "マッチすべき", false, 300, false).unwrap().hits;
+    let hits = search(&ws.state, "マッチすべき", false, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "sjis.cbl", 2);
 }
 
@@ -176,7 +186,9 @@ fn shift_jis_no_false_negative_ascii_in_sjis_file() {
     let content = to_shift_jis("PROCEDURE DIVISION.\n    MOVE 0 TO COUNTER.\n");
     ws.write("prog.cbl", &content);
     ws.build("shift_jis");
-    let hits = search(&ws.state, "PROCEDURE", false, 300, false).unwrap().hits;
+    let hits = search(&ws.state, "PROCEDURE", false, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "prog.cbl", 1);
 }
 
@@ -190,7 +202,9 @@ fn euc_jp_japanese_query_hits() {
     let content = to_euc_jp("データ処理プログラム\n結果を出力する\n");
     ws.write("eucjp.cbl", &content);
     ws.build("euc-jp");
-    let hits = search(&ws.state, "データ処理", false, 300, false).unwrap().hits;
+    let hits = search(&ws.state, "データ処理", false, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "eucjp.cbl", 1);
 }
 
@@ -205,10 +219,14 @@ fn mixed_encoding_both_roots_hit() {
     ws.write_sjis("sjis.cbl", "マッチする行\n計算処理\n");
     ws.build();
     // UTF-8 file hit
-    let hits_en = search(&ws.state, "calculate_total", false, 300, false).unwrap().hits;
+    let hits_en = search(&ws.state, "calculate_total", false, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits_en, "utf8.rs", 1);
     // Shift_JIS file hit
-    let hits_jp = search(&ws.state, "計算処理", false, 300, false).unwrap().hits;
+    let hits_jp = search(&ws.state, "計算処理", false, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits_jp, "sjis.cbl", 2);
 }
 
@@ -218,7 +236,9 @@ fn mixed_encoding_no_cross_contamination() {
     ws.write_utf8("only_utf8.rs", "unique_utf8_identifier");
     ws.write_sjis("only_sjis.cbl", "固有の識別子テキスト\n");
     ws.build();
-    let hits = search(&ws.state, "unique_utf8_identifier", false, 300, false).unwrap().hits;
+    let hits = search(&ws.state, "unique_utf8_identifier", false, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "only_utf8.rs", 1);
     assert_no_hit(&hits, "only_sjis.cbl");
 }
@@ -236,7 +256,9 @@ fn cobol_fixed_width_columns_hit() {
         b"      *COMMENT\n       MOVE WS-AMOUNT TO TS-TOTAL.\n       STOP RUN.\n",
     );
     ws.build("utf-8");
-    let hits = search(&ws.state, "WS-AMOUNT", false, 300, false).unwrap().hits;
+    let hits = search(&ws.state, "WS-AMOUNT", false, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "prog.cbl", 2);
 }
 
@@ -249,7 +271,9 @@ fn regex_literal_run_match() {
     let ws = Workspace::new("utf-8");
     ws.write("a.txt", b"calculateTotal(100)\n");
     ws.build("utf-8");
-    let hits = search(&ws.state, r"calc.*Total", true, 300, false).unwrap().hits;
+    let hits = search(&ws.state, r"calc.*Total", true, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "a.txt", 1);
 }
 
@@ -258,7 +282,9 @@ fn regex_with_digit_quantifier() {
     let ws = Workspace::new("utf-8");
     ws.write("a.txt", b"foo123bar\n");
     ws.build("utf-8");
-    let hits = search(&ws.state, r"foo\d+bar", true, 300, false).unwrap().hits;
+    let hits = search(&ws.state, r"foo\d+bar", true, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "a.txt", 1);
 }
 
@@ -289,7 +315,9 @@ fn regex_case_insensitive_default() {
     let ws = Workspace::new("utf-8");
     ws.write("a.txt", b"calculateTotal\n");
     ws.build("utf-8");
-    let hits = search(&ws.state, "CALCULATETOTAL", true, 300, false).unwrap().hits;
+    let hits = search(&ws.state, "CALCULATETOTAL", true, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "a.txt", 1);
 }
 
@@ -298,9 +326,13 @@ fn regex_case_sensitive() {
     let ws = Workspace::new("utf-8");
     ws.write("a.txt", b"calculateTotal\n");
     ws.build("utf-8");
-    let hits_match = search(&ws.state, "calculateTotal", true, 300, true).unwrap().hits;
+    let hits_match = search(&ws.state, "calculateTotal", true, 300, true)
+        .unwrap()
+        .hits;
     assert_hit(&hits_match, "a.txt", 1);
-    let hits_no = search(&ws.state, "CALCULATETOTAL", true, 300, true).unwrap().hits;
+    let hits_no = search(&ws.state, "CALCULATETOTAL", true, 300, true)
+        .unwrap()
+        .hits;
     assert!(hits_no.is_empty());
 }
 
@@ -311,7 +343,9 @@ fn regex_cjk_literal_run_pre_filters() {
     let ws = Workspace::new("utf-8");
     ws.write("a.txt", "契約者の登録情報\n".as_bytes());
     ws.build("utf-8");
-    let hits = search(&ws.state, "契約.*情報", true, 300, false).unwrap().hits;
+    let hits = search(&ws.state, "契約.*情報", true, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "a.txt", 1);
 }
 
@@ -406,7 +440,9 @@ fn nested_directory_indexed() {
     let ws = Workspace::new("utf-8");
     ws.write("deep/nested/dir/file.txt", b"deeply_nested_identifier");
     ws.build("utf-8");
-    let hits = search(&ws.state, "deeply_nested_identifier", false, 300, false).unwrap().hits;
+    let hits = search(&ws.state, "deeply_nested_identifier", false, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "file.txt", 1);
 }
 
@@ -424,7 +460,9 @@ fn sync_picks_up_new_file() {
     // ensure mtime differs
     std::thread::sleep(std::time::Duration::from_millis(10));
     sync_all(&ws.state, |_| {}).unwrap();
-    let hits = search(&ws.state, "brand_new_content", false, 300, false).unwrap().hits;
+    let hits = search(&ws.state, "brand_new_content", false, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "new_file.txt", 1);
 }
 
@@ -437,9 +475,13 @@ fn sync_reflects_modified_file() {
     std::thread::sleep(std::time::Duration::from_millis(10));
     ws.write("f.txt", b"new_updated_content");
     sync_all(&ws.state, |_| {}).unwrap();
-    let hits = search(&ws.state, "new_updated_content", false, 300, false).unwrap().hits;
+    let hits = search(&ws.state, "new_updated_content", false, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "f.txt", 1);
-    let old_hits = search(&ws.state, "old content here", false, 300, false).unwrap().hits;
+    let old_hits = search(&ws.state, "old content here", false, 300, false)
+        .unwrap()
+        .hits;
     assert_no_hit(&old_hits, "f.txt");
 }
 
@@ -450,7 +492,9 @@ fn sync_removes_deleted_file() {
     ws.build("utf-8");
     std::fs::remove_file(ws.root.join("to_delete.txt")).unwrap();
     sync_all(&ws.state, |_| {}).unwrap();
-    let hits = search(&ws.state, "delete_me_content", false, 300, false).unwrap().hits;
+    let hits = search(&ws.state, "delete_me_content", false, 300, false)
+        .unwrap()
+        .hits;
     assert_no_hit(&hits, "to_delete.txt");
 }
 
@@ -463,6 +507,8 @@ fn sync_unchanged_file_not_reindexed() {
     // sync without touching the file
     let stats = sync_all(&ws.state, |_| {}).unwrap();
     assert_eq!(stats.updated, 0);
-    let hits = search(&ws.state, "stable_unique_identifier", false, 300, false).unwrap().hits;
+    let hits = search(&ws.state, "stable_unique_identifier", false, 300, false)
+        .unwrap()
+        .hits;
     assert_hit(&hits, "stable.txt", 1);
 }

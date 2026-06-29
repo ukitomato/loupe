@@ -166,7 +166,9 @@ fn handle_cmd(
                     serde_json::json!({ "id": id, "type": "match", "file": h.file, "line": h.line, "text": h.text }),
                 );
             }
-            emit(serde_json::json!({ "id": id, "type": "done", "hits": n, "truncated": outcome.candidates_truncated }));
+            emit(
+                serde_json::json!({ "id": id, "type": "done", "hits": n, "truncated": outcome.candidates_truncated }),
+            );
             Ok(false)
         }
         Some("watch") => {
