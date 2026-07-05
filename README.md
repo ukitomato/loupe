@@ -2,7 +2,7 @@
 
 # loupe
 
-**Fast indexed full-text code search — one n-gram index, three front-ends: CLI, MCP server, and VS Code.**
+**A developer tool for fast indexed full-text code search — one n-gram index, three front-ends: CLI, MCP server, and VS Code.**
 
 A small Rust ([Tantivy](https://github.com/quickwit-oss/tantivy)) binary keeps a compact n-gram index,
 decoding **UTF-8, Shift_JIS, and EUC-JP** per folder, and updates it incrementally as files change.
@@ -17,10 +17,12 @@ decoding **UTF-8, Shift_JIS, and EUC-JP** per folder, and updates it incremental
 
 ---
 
-Plain recursive grep re-scans the whole tree on every query, editor search crawls on big projects, and
-most code-search tools assume everything is UTF-8. **loupe** trades a one-time index build for
-near-instant searches afterward, and decodes each folder by its own encoding so legacy non-UTF-8 sources
-are searchable too — **Docker-free, no runtime deps**.
+**loupe** is a developer productivity tool: a source-code search engine that software engineers run
+locally (via the CLI, an editor extension, or an AI coding agent) to find code across their own
+repositories. Plain recursive grep re-scans the whole tree on every query, editor search crawls on
+big projects, and most code-search tools assume everything is UTF-8. loupe trades a one-time index
+build for near-instant searches afterward, and decodes each folder by its own encoding so legacy
+non-UTF-8 sources are searchable too — **Docker-free, no runtime deps**.
 
 It works on any project, and it shines where search usually hurts: **large or multi-encoding
 codebases** — for example a monorepo holding many repositories, or a tree mixing modern UTF-8 code with
@@ -68,6 +70,9 @@ powershell -ExecutionPolicy Bypass -c "irm https://github.com/ukitomato/loupe/re
 
 Or grab a tarball from the [Releases page](https://github.com/ukitomato/loupe/releases), or build
 from source: `cargo install --git https://github.com/ukitomato/loupe loupe`.
+
+Windows binaries are intended to be signed for free by the [SignPath Foundation](https://signpath.org/)
+(application pending — see [Code Signing Policy](#-code-signing-policy)).
 
 ## 🚀 CLI
 
@@ -204,6 +209,29 @@ Write it with `loupe init`, or edit it by hand. Relative paths resolve against t
   slower on large candidate sets.
 - If antivirus scans the index directory, builds can occasionally hit a transient I/O error; loupe
   retries automatically. Excluding the index folder from AV avoids it entirely.
+
+## 🔏 Code Signing Policy
+
+We are applying to the [SignPath Foundation](https://signpath.org/) program for free Windows code
+signing. **Status: pending approval.** Once approved, the statement required by the program will be:
+"Free code signing provided by SignPath.io, certificate by SignPath Foundation".
+
+**What will be signed:** Windows binaries (`loupe.exe`), built from this public repository by GitHub
+Actions (`cargo-dist`, see [`.github/workflows/release.yml`](.github/workflows/release.yml)) and
+distributed in two forms — the standalone CLI archive/installer on
+[GitHub Releases](https://github.com/ukitomato/loupe/releases), and the copy bundled into the
+`win32-x64` VS Code extension `.vsix` (see [`.github/workflows/vscode.yml`](.github/workflows/vscode.yml)).
+The `.vsix` reuses the exact same released binary; there is no separate build path, so only one
+signed artifact needs to be produced per release.
+
+- **Authors (commit access):** [ukitomato](https://github.com/ukitomato) (sole maintainer).
+- **Reviewers (review required for non-committer changes):** [ukitomato](https://github.com/ukitomato) —
+  all external pull requests are reviewed by the maintainer before merge.
+- **Approvers (approve each signing request):** [ukitomato](https://github.com/ukitomato) — each
+  signing request requires explicit approval by the maintainer.
+- **Privacy:** This program will not transfer any information to other networked systems unless
+  specifically requested by the user. `loupe` builds and searches its index entirely on your local
+  filesystem and makes no network calls.
 
 ## 📄 License
 
