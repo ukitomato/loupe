@@ -19,7 +19,7 @@ function findBinary(): string | undefined {
   // Possible locations relative to this compiled test file (out/test/realbinary.test.js):
   //   - CI layout:   out/test/ -> vscode/bin/<platform>/
   //   - Repo layout: out/test/ -> tools/loupe/bin/<platform>/
-  const base = path.join(__dirname, '..', '..', '..'); // vscode/
+  const base = path.join(__dirname, '..', '..'); // vscode/
   const candidates = [
     path.join(base, 'bin', PLATFORM, EXE),
     path.join(base, '..', 'bin', PLATFORM, EXE),  // tools/loupe/bin/

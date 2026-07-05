@@ -56,7 +56,7 @@
     "watch": "node esbuild.js --watch",
     "typecheck": "tsc --noEmit",
     "package": "npm run build && vsce package --allow-missing-repository",
-    "pretest": "tsc -p tsconfig.test.json --noEmit && node esbuild.test.js",
+    "pretest": "tsc -p tsconfig.test.json --noEmit && node esbuild.js && node esbuild.test.js",
     "test": "vscode-test"
   },
   "devDependencies": {

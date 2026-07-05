@@ -19,6 +19,11 @@ function sim(s: Sidecar, msg: object): void {
   (s as any).onLine(JSON.stringify(msg));
 }
 
+/** search/build/sync/watch are async; yield so pending registration runs before sim(). */
+async function afterRequest(): Promise<void> {
+  await Promise.resolve();
+}
+
 // --- ready handshake ---
 
 suite('Sidecar: ready handshake', () => {
@@ -47,6 +52,7 @@ suite('Sidecar: search protocol', () => {
     const s = makeMock();
     const hits: Match[] = [];
     const p = s.search('foo', false, 100, false, m => hits.push(m));
+    await afterRequest();
     sim(s, { type: 'match', id: 1, file: '/src/a.ts', line: 3, text: 'foobar' });
     sim(s, { type: 'match', id: 1, file: '/src/b.ts', line: 7, text: 'foo_baz' });
     sim(s, { type: 'done', id: 1, hits: 2 });
@@ -63,6 +69,7 @@ suite('Sidecar: search protocol', () => {
     const s = makeMock();
     let called = false;
     const p = s.search('xyz', false, 100, false, () => { called = true; });
+    await afterRequest();
     sim(s, { type: 'done', id: 1, hits: 0 });
     const result = await p;
     assert.strictEqual(result.hits, 0);
@@ -72,6 +79,7 @@ suite('Sidecar: search protocol', () => {
   test('promise is removed from pending after done', async () => {
     const s = makeMock();
     const p = s.search('foo', false, 100, false, () => {});
+    await afterRequest();
     assert.strictEqual((s as any).pending.size, 1);
     sim(s, { type: 'done', id: 1, hits: 0 });
     await p;
@@ -81,6 +89,7 @@ suite('Sidecar: search protocol', () => {
   test('error with id rejects the corresponding promise', async () => {
     const s = makeMock();
     const p = s.search('foo', false, 100, false, () => {});
+    await afterRequest();
     sim(s, { type: 'error', id: 1, message: 'regex too short' });
     await assert.rejects(p, /regex too short/);
     assert.strictEqual((s as any).pending.size, 0);
@@ -93,6 +102,7 @@ suite('Sidecar: search protocol', () => {
 
     const p1 = s.search('Hello', false, 50, false, () => {});
     const p2 = s.search('World', false, 50, true, () => {});
+    await afterRequest();
     sim(s, { type: 'done', id: 1, hits: 0 });
     sim(s, { type: 'done', id: 2, hits: 0 });
     await Promise.all([p1, p2]);
@@ -111,6 +121,7 @@ suite('Sidecar: build protocol', () => {
     const s = makeMock();
     const vals: number[] = [];
     const p = s.build(n => vals.push(n));
+    await afterRequest();
     sim(s, { type: 'progress', id: 1, indexed: 100 });
     sim(s, { type: 'progress', id: 1, indexed: 200 });
     sim(s, { type: 'built', id: 1, files: 200, ms: 550, attempts: 1 });
@@ -125,6 +136,7 @@ suite('Sidecar: build protocol', () => {
     const s = makeMock();
     const msgs: (string | undefined)[] = [];
     const p = s.build((_, msg) => msgs.push(msg));
+    await afterRequest();
     sim(s, { type: 'progress', id: 1, indexed: 50, message: 'indexing src/' });
     sim(s, { type: 'built', id: 1, files: 50, ms: 200, attempts: 1 });
     await p;
@@ -139,6 +151,7 @@ suite('Sidecar: sync protocol', () => {
     const s = makeMock();
     const vals: number[] = [];
     const p = s.sync(n => vals.push(n));
+    await afterRequest();
     sim(s, { type: 'progress', id: 1, indexed: 5 });
     sim(s, { type: 'synced', id: 1, updated: 5, removed: 2, ms: 100 });
     const result = await p;
@@ -151,6 +164,7 @@ suite('Sidecar: sync protocol', () => {
   test('synced with zero updates/removes', async () => {
     const s = makeMock();
     const p = s.sync(() => {});
+    await afterRequest();
     sim(s, { type: 'synced', id: 1, updated: 0, removed: 0, ms: 10 });
     const result = await p;
     assert.strictEqual(result.updated, 0);
@@ -164,6 +178,7 @@ suite('Sidecar: watch protocol', () => {
   test('watching message resolves the watch promise', async () => {
     const s = makeMock();
     const p = s.watch();
+    await afterRequest();
     sim(s, { type: 'watching', id: 1 });
     await p;  // should not throw
   });
@@ -176,6 +191,7 @@ suite('Sidecar: error handling', () => {
     const s = makeMock();
     const p1 = s.search('foo', false, 100, false, () => {});
     const p2 = s.build(() => {});
+    await afterRequest();
     sim(s, { type: 'error', message: 'fatal index error' });
     const [r1, r2] = await Promise.allSettled([p1, p2]);
     assert.strictEqual(r1.status, 'rejected');
@@ -187,6 +203,7 @@ suite('Sidecar: error handling', () => {
   test('error without id clears the pending map', async () => {
     const s = makeMock();
     void s.search('foo', false, 100, false, () => {}).catch(() => {});
+    await afterRequest();
     assert.strictEqual((s as any).pending.size, 1);
     sim(s, { type: 'error' });
     // give microtasks a tick
@@ -197,6 +214,7 @@ suite('Sidecar: error handling', () => {
   test('error with null id is treated as top-level error', async () => {
     const s = makeMock();
     const p = s.search('foo', false, 100, false, () => {});
+    await afterRequest();
     sim(s, { type: 'error', id: null, message: 'null id error' });
     const [r] = await Promise.allSettled([p]);
     assert.strictEqual(r.status, 'rejected');
@@ -214,6 +232,7 @@ suite('Sidecar: error handling', () => {
   test('unknown message type is silently ignored', async () => {
     const s = makeMock();
     const p = s.search('foo', false, 100, false, () => {});
+    await afterRequest();
     sim(s, { type: 'unknown_type', id: 1, data: 'xyz' });
     sim(s, { type: 'done', id: 1, hits: 0 });
     await p;  // should still resolve normally
@@ -238,6 +257,7 @@ suite('Sidecar: id correlation', () => {
 
     const p1 = s.search('aaa', false, 100, false, m => h1.push(m.file));
     const p2 = s.search('bbb', false, 100, false, m => h2.push(m.file));
+    await afterRequest();
 
     // Interleave: id=2 arrives first
     sim(s, { type: 'match', id: 2, file: '/b1.ts', line: 1, text: 'bbb' });
@@ -258,6 +278,7 @@ suite('Sidecar: id correlation', () => {
     const pSearch = s.search('foo', false, 100, false, () => {});
     const pBuild  = s.build(n => progress.push(n));
     const pSync   = s.sync(() => {});
+    await afterRequest();
 
     sim(s, { type: 'progress', id: 2, indexed: 10 });
     sim(s, { type: 'match', id: 1, file: '/f.ts', line: 1, text: 'foo' });
@@ -273,7 +294,7 @@ suite('Sidecar: id correlation', () => {
     assert.deepStrictEqual(progress, [10, 20]);
   });
 
-  test('nextId increments monotonically per request', () => {
+  test('nextId increments monotonically per request', async () => {
     const s = makeMock();
     const sent: number[] = [];
     (s as any).send = (obj: any) => sent.push(obj.id);
@@ -281,6 +302,7 @@ suite('Sidecar: id correlation', () => {
     void s.search('a', false, 10, false, () => {}).catch(() => {});
     void s.search('b', false, 10, false, () => {}).catch(() => {});
     void s.build(() => {}).catch(() => {});
+    await afterRequest();
 
     assert.deepStrictEqual(sent, [1, 2, 3]);
   });
