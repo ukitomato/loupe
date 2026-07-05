@@ -298,7 +298,8 @@ impl McpServer {
     fn tool_sync(&mut self) -> Value {
         if self.read_only {
             return text_result(
-                "index is read-only: sync is handled by the running loupe serve daemon.".to_string(),
+                "index is read-only: sync is handled by the running loupe serve daemon."
+                    .to_string(),
                 false,
             );
         }
