@@ -1,139 +1,73 @@
-<div align="center">
+# Loupe Search
 
-# 🔍 loupe
+**Fast indexed full-text search inside VS Code** — substring and regex, with per-folder encoding support (UTF-8, Shift_JIS, EUC-JP). A native Rust binary is bundled with the extension; no Docker or extra runtime.
 
-**Fast indexed full-text code search — one trigram index, three front-ends: CLI, MCP server, and VS Code.**
+Open a workspace, build the index once, then search across your tree in milliseconds. The index updates incrementally as files change.
 
-A small Rust ([Tantivy](https://github.com/quickwit-oss/tantivy)) binary keeps a compact trigram index,
-decoding **UTF-8, Shift_JIS, and EUC-JP** per folder, and updates it incrementally as files change.
+## Screenshots
 
-![CLI](https://img.shields.io/badge/CLI-loupe-DEA584?logo=rust&logoColor=white)
-![MCP](https://img.shields.io/badge/MCP-stdio%20server-blue)
-![VS Code](https://img.shields.io/badge/VS%20Code-extension-007ACC?logo=visualstudiocode&logoColor=white)
-![Engine](https://img.shields.io/badge/engine-Rust%20%2F%20Tantivy-DEA584?logo=rust&logoColor=white)
-![License](https://img.shields.io/badge/license-MIT-green)
+### Sidebar search
 
-</div>
+Click the **loupe** icon in the Activity Bar (or press `Ctrl+Alt+Shift+F`). Results stream in, grouped by file, with match highlighting.
 
----
+![Sidebar search with grouped results](images/sidebar-search.png)
 
-Plain recursive grep re-scans the whole tree on every query, editor search crawls on big projects, and
-most code-search tools assume everything is UTF-8. **loupe** trades a one-time index build for
-near-instant searches afterward, and decodes each folder by its own encoding so legacy non-UTF-8 sources
-are searchable too — **Docker-free, no runtime deps**.
+### QuickPick search
 
-It works on any project, and it shines where search usually hurts: **large or multi-encoding
-codebases** — for example a monorepo holding many repositories, or a tree mixing modern UTF-8 code with
-legacy Shift_JIS assets.
+Press `Ctrl+Alt+F` for a lightweight one-shot search. Results appear in a filterable dropdown; press Enter to open the selected file.
 
-- ⚡ **Compact trigram index** — a small fraction of your code size, not a copy of it.
-- 🈶 **Per-folder encoding** — each folder is decoded (UTF-8 / Shift_JIS / EUC-JP …) at index time, so a
-  single index serves mixed-encoding trees and non-UTF-8 text is searchable without mojibake.
-- 🔁 **Incremental** — search auto-syncs changed files first; the daemon/extension also watch the tree and
-  reindex only what changed, so the index stays fresh without re-scanning everything.
-- 🔎 **Substring and regex** — trigram candidates → exact verify (Zoekt/codesearch style).
-- 🧩 **One index, three front-ends** — the **CLI**, an **MCP server** (for AI agents), and the **VS Code**
-  extension all read the same index and the same `settings.json`, so they can never disagree about what's
-  indexed.
-- 🪶 **Self-contained native binary** — one `loupe` executable per platform, no Docker, no runtime deps.
+![QuickPick search](images/quickpick-search.png)
 
-## 🧠 Model
+## Getting started
 
-Three steps, separated on purpose:
+1. **Install** this extension from the Marketplace.
+2. **Open a folder** in VS Code.
+3. On first launch, loupe prompts **"Build it now?"** — accept it, or run **loupe: Build / rebuild index** from the Command Palette.
+4. **Search** with `Ctrl+Alt+F` (QuickPick) or focus the sidebar with `Ctrl+Alt+Shift+F`.
 
-1. **`init`** — choose which folders to index and each folder's encoding. Writes
-   `<index-dir>/settings.json` — the single source of truth shared by all front-ends.
-2. **`build`** — create the index from `settings.json`.
-3. **`search`** — the everyday operation; it auto-syncs changed files first.
+The extension bundles a `loupe` binary for your platform. If no `.loupe/settings.json` exists yet, the first build indexes the whole workspace as UTF-8.
 
-The index lives in `<workspace>/.loupe/` by default (override with `--index-dir` or
-`LOUPE_INDEX_DIR`). `settings.json` is safe to commit; the index body (`tantivy/`, `meta.json`) is
-git-ignored automatically.
+## How to search
 
-## 📦 Install
+### Sidebar view
 
-Prebuilt binaries for Linux, macOS, and Windows are published to GitHub Releases (built by
-[cargo-dist](https://github.com/axodotdev/cargo-dist)). One-line installers:
+- Type in the search box — results update as you type (queries need at least 3 characters).
+- **`Aa`** — toggle case-sensitive matching (default: case-insensitive).
+- **`.*`** — toggle regular expression mode (pattern needs a literal run of ≥3 characters).
+- **max ▾** — cycle max results: 50 / 100 / 300 / 1000 / ∞.
+- **`···`** — show path filters:
+  - **Files to include** — e.g. `src/`, `*.java`
+  - **Files to exclude** — e.g. `*.min.js`, `test/`
+  - Glob patterns (`*`, `**`, `?`) are supported; plain text matches as a path substring. Filters apply client-side without re-searching.
+- Click a result row to open the file at that line. Click a file header to collapse/expand the group.
 
-```bash
-# Linux / macOS
-curl --proto '=https' --tlsv1.2 -LsSf https://github.com/ukitomato/loupe/releases/latest/download/loupe-installer.sh | sh
-```
+### QuickPick
 
-```powershell
-# Windows (PowerShell)
-powershell -ExecutionPolicy Bypass -c "irm https://github.com/ukitomato/loupe/releases/latest/download/loupe-installer.ps1 | iex"
-```
+- `Ctrl+Alt+F` — substring search in a dropdown.
+- **loupe: Search (regex)** — regex search via QuickPick (Command Palette).
 
-Or grab a tarball from the [Releases page](https://github.com/ukitomato/loupe/releases), or build
-from source: `cargo install --git https://github.com/ukitomato/loupe loupe`.
+## Commands
 
-## 🚀 CLI
+| Command | Keybinding | Description |
+| --- | --- | --- |
+| **loupe: Search (substring)** | `Ctrl+Alt+F` | QuickPick — substring search |
+| **loupe: Search (regex)** | — | QuickPick — regex search |
+| **loupe: Focus Search View** | `Ctrl+Alt+Shift+F` | Focus the sidebar search panel |
+| **loupe: Build / rebuild index** | — | Sync / rebuild the index |
 
-```bash
-# 1. configure roots (interactive in a terminal, or via flags); add @enc for non-UTF-8 folders
-loupe init --root src --root lib
-loupe init --root src --root legacy@shift_jis      # mixed encodings in one index
+## VS Code settings
 
-# 2. build the index from settings.json
-loupe build
+| Setting | Default | Description |
+| --- | --- | --- |
+| `loupe.indexDir` | *(empty)* | Index directory. Empty = `<workspace>/.loupe`. |
+| `loupe.binaryPath` | *(empty)* | Path to the `loupe` executable. Empty = bundled binary. |
+| `loupe.maxResults` | `300` | Default max results for search. |
 
-# 3. search (auto-syncs first)
-loupe search "calcTotal"
-loupe search "parse[A-Za-z]+Request" --regex
-loupe search "calcTotal" --json                    # JSON array of { file, line, text }
+**Roots and encodings are not VS Code settings.** They live in `<indexDir>/settings.json` so the extension, CLI, and MCP server always agree on what is indexed.
 
-loupe status                                        # built? file count, roots, last build/sync
-```
+### Optional: `settings.json`
 
-| Command | Purpose |
-| --- | --- |
-| `init [--root PATH[@ENC]]… [--force]` | Configure roots/encodings → `settings.json` |
-| `build [--force]` | (Re)build the index from `settings.json` |
-| `sync` | Incremental catch-up (search does this automatically) |
-| `search <q> [--regex] [--max N] [--json] [--no-sync]` | Search the index |
-| `status [--json]` | Index statistics |
-| `serve` | NDJSON daemon used by the VS Code extension |
-| `mcp` | MCP (Model Context Protocol) stdio server |
-
-## 🤖 MCP server (AI agents)
-
-`loupe mcp` speaks the Model Context Protocol over stdio. Register it with your MCP client:
-
-```jsonc
-{
-  "mcpServers": {
-    "loupe": {
-      "command": "/path/to/loupe",
-      "args": ["mcp", "--index-dir", "/path/to/workspace/.loupe"]
-    }
-  }
-}
-```
-
-Tools exposed: `search_code`, `search_regex`, `build_index`, `sync_index`, `index_status`. The server
-opens the shared index and keeps it fresh via a file watcher for the lifetime of the session.
-
-## 🧩 VS Code extension
-
-1. Configure roots once — run `loupe init …` (or edit `.loupe/settings.json`), then accept the
-   **"Build it now?"** prompt (or run **loupe: Build / rebuild index**). If no `settings.json` exists,
-   the first build indexes the whole workspace as UTF-8.
-2. Hit **`Ctrl+Alt+F`** to search; use **Search (regex)** for patterns.
-
-| Command | Keybinding |
-| --- | --- |
-| **loupe: Search (substring)** | `Ctrl+Alt+F` |
-| **loupe: Search (regex)** | — |
-| **loupe: Build / rebuild index** | — |
-
-VS Code settings cover only the editor side — `loupe.indexDir`, `loupe.binaryPath`,
-`loupe.maxResults`. **Roots and encodings are not VS Code settings**; they live in
-`settings.json` so the CLI, MCP server, and extension stay in agreement.
-
-## ⚙️ Configuration — `settings.json`
-
-`<index-dir>/settings.json` is the one place that defines what gets indexed:
+To index specific folders or non-UTF-8 encodings, create `.loupe/settings.json` in your workspace:
 
 ```jsonc
 {
@@ -144,41 +78,9 @@ VS Code settings cover only the editor side — `loupe.indexDir`, `loupe.binaryP
 }
 ```
 
-Write it with `loupe init`, or edit it by hand. Relative paths resolve against the workspace root
-(the parent of the index dir).
+You can write this file with the `loupe init` CLI command, or edit it by hand. See the [repository README](https://github.com/ukitomato/loupe#-configuration--settingsjson) for details.
 
-## 🔧 How it works
+## More
 
-```
-   CLI / MCP server / VS Code extension
-     │  (all read settings.json + the same index)
-     ▼
-   loupe  (Rust / Tantivy)
-     ├─ build:   parallel walk → per-file decode (UTF-8/Shift_JIS/EUC-JP) → DISTINCT trigrams → index
-     ├─ sync:    compare mtimes → reindex only changed files, drop deleted ones
-     ├─ watch:   notify FS events → incremental update (delete+add, debounced)
-     └─ search:  trigram-AND candidates → parallel verify (substring/regex) → file:line
-```
-
-## 📊 Measured (≈290k files: ~260k UTF-8 + ~29k Shift_JIS)
-
-| | |
-| --- | --- |
-| Index size | **≈237 MB** |
-| First build (cold, one-time) | ~28 min · then incremental is instant |
-| Search — specific identifier | ~180 ms |
-| Search — Japanese in Shift_JIS | ~156 ms |
-| Search — very common term | <1 s |
-
-## 📋 Notes
-
-- **Binaries** are distributed via GitHub Releases (built by cargo-dist), not committed to the repo.
-  The VS Code extension's CI downloads the matching one and bundles it under `bin/<os>-<arch>/` at
-  package time; for local development, `cargo build` and point `loupe.binaryPath` (or `$PATH`) at it.
-- **regex** uses the index only when the pattern contains a literal run of ≥3 characters (e.g. `func\s+\w+`).
-- If antivirus scans the index directory, builds can occasionally hit a transient I/O error; loupe
-  retries automatically. Excluding the index folder from AV avoids it entirely.
-
-## 📄 License
-
-MIT — see the `LICENSE` file. Built on [Tantivy](https://github.com/quickwit-oss/tantivy) (MIT).
+- **CLI & MCP server** — same index, same `settings.json`. See the [main README](https://github.com/ukitomato/loupe).
+- **License** — MIT. Built on [Tantivy](https://github.com/quickwit-oss/tantivy).

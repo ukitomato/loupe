@@ -1,0 +1,129 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>loupe quickpick screenshot</title>
+  <link rel="stylesheet" href="theme.css" />
+  <style>
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      width: 560px;
+      min-height: 360px;
+      font-family: var(--vscode-font-family);
+      font-size: var(--vscode-font-size);
+      background: #1e1e1e;
+      padding: 24px;
+    }
+    .quickpick {
+      background: var(--vscode-quickInput-background);
+      border: 1px solid var(--vscode-widget-border);
+      border-radius: 6px;
+      overflow: hidden;
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.45);
+    }
+    .qp-input {
+      display: flex;
+      align-items: center;
+      gap: 8px;
+      padding: 8px 12px;
+      border-bottom: 1px solid var(--vscode-widget-border);
+      color: var(--vscode-quickInput-foreground);
+    }
+    .qp-input input {
+      flex: 1;
+      border: none;
+      outline: none;
+      background: transparent;
+      color: inherit;
+      font: inherit;
+    }
+    .qp-prompt {
+      padding: 6px 12px 4px;
+      color: var(--vscode-descriptionForeground);
+      font-size: 12px;
+    }
+    .qp-list { padding: 4px 0; }
+    .qp-item {
+      display: grid;
+      grid-template-columns: 1fr auto;
+      grid-template-rows: auto auto;
+      gap: 0 12px;
+      padding: 4px 12px;
+      cursor: default;
+      color: var(--vscode-quickInput-foreground);
+    }
+    .qp-item.focused {
+      background: var(--vscode-quickInputList-focusBackground);
+      color: var(--vscode-quickInputList-focusForeground);
+    }
+    .qp-label {
+      grid-column: 1;
+      display: flex;
+      align-items: center;
+      gap: 6px;
+      font-weight: 500;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .qp-icon {
+      opacity: 0.85;
+      font-size: 14px;
+    }
+    .qp-desc {
+      grid-column: 2;
+      grid-row: 1 / span 2;
+      align-self: center;
+      color: var(--vscode-descriptionForeground);
+      font-family: var(--vscode-editor-font-family);
+      font-size: 12px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+      max-width: 220px;
+    }
+    .qp-item.focused .qp-desc { color: rgba(255, 255, 255, 0.75); }
+    .qp-detail {
+      grid-column: 1;
+      color: var(--vscode-descriptionForeground);
+      font-size: 11px;
+      white-space: nowrap;
+      overflow: hidden;
+      text-overflow: ellipsis;
+    }
+    .qp-item.focused .qp-detail { color: rgba(255, 255, 255, 0.65); }
+  </style>
+</head>
+<body>
+  <div class="quickpick">
+    <div class="qp-prompt">loupe (substring)</div>
+    <div class="qp-input">
+      <span>🔍</span>
+      <input type="text" value="calcTotal" readonly />
+    </div>
+    <div class="qp-list">
+      <div class="qp-item focused">
+        <div class="qp-label"><span class="qp-icon">📄</span> invoice.ts:42</div>
+        <div class="qp-desc">export function calcTotal(items: LineItem[]): number {</div>
+        <div class="qp-detail">src/billing/invoice.ts</div>
+      </div>
+      <div class="qp-item">
+        <div class="qp-label"><span class="qp-icon">📄</span> handlers.ts:103</div>
+        <div class="qp-desc">    total: calcTotal(body.items),</div>
+        <div class="qp-detail">src/api/handlers.ts</div>
+      </div>
+      <div class="qp-item">
+        <div class="qp-label"><span class="qp-icon">📄</span> billing.test.ts:11</div>
+        <div class="qp-desc">    expect(calcTotal(items)).toBe(1500);</div>
+        <div class="qp-detail">tests/billing.test.ts</div>
+      </div>
+      <div class="qp-item">
+        <div class="qp-label"><span class="qp-icon">📄</span> invoice.ts:58</div>
+        <div class="qp-desc">  const subtotal = calcTotal(items);</div>
+        <div class="qp-detail">src/billing/invoice.ts</div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>

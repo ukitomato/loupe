@@ -1,0 +1,33 @@
+/* VS Code Dark+ theme tokens for README screenshot mocks */
+:root {
+  --vscode-sideBar-background: #252526;
+  --vscode-foreground: #cccccc;
+  --vscode-input-background: #3c3c3c;
+  --vscode-input-foreground: #cccccc;
+  --vscode-input-border: #3c3c3c;
+  --vscode-input-placeholderForeground: #a6a6a6;
+  --vscode-focusBorder: #007fd4;
+  --vscode-descriptionForeground: #9d9d9d;
+  --vscode-list-hoverBackground: #2a2d2e;
+  --vscode-editorLineNumber-foreground: #858585;
+  --vscode-editor-font-family: Menlo, Monaco, 'Courier New', monospace;
+  --vscode-badge-foreground: #ffffff;
+  --vscode-badge-background: #4d4d4d;
+  --vscode-editor-findMatchHighlightBackground: rgba(234, 92, 0, 0.33);
+  --vscode-toolbar-hoverBackground: rgba(90, 93, 94, 0.31);
+  --vscode-inputOption-activeBackground: rgba(0, 127, 212, 0.4);
+  --vscode-inputOption-activeForeground: #ffffff;
+  --vscode-inputOption-activeBorder: #007fd4;
+  --vscode-icon-foreground: #c5c5c5;
+  --vscode-font-family: -apple-system, BlinkMacSystemFont, 'Segoe UI', sans-serif;
+  --vscode-font-size: 13px;
+  --vscode-quickInput-background: #252526;
+  --vscode-quickInput-foreground: #cccccc;
+  --vscode-quickInputList-focusBackground: #04395e;
+  --vscode-quickInputList-focusForeground: #ffffff;
+  --vscode-list-activeSelectionBackground: #04395e;
+  --vscode-list-activeSelectionForeground: #ffffff;
+  --vscode-widget-border: #454545;
+  --vscode-titleBar-activeBackground: #3c3c3c;
+  --vscode-titleBar-activeForeground: #cccccc;
+}

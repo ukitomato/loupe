@@ -124,40 +124,14 @@ opens the shared index and keeps it fresh via a file watcher for the lifetime of
 
 ## 🧩 VS Code extension
 
-Two search UIs share the same index and update it automatically in the background.
+Install **[Loupe Search](https://marketplace.visualstudio.com/items?itemName=ukitomato.loupe-search)** from the Marketplace.
 
-### Sidebar view
+The extension bundles the `loupe` binary and shares the same index and `settings.json` as the CLI and MCP server. Two search UIs are included:
 
-Click the **loupe icon** in the Activity Bar, or press **`Ctrl+Alt+Shift+F`** to focus it.
+- **Sidebar** — Activity Bar icon or `Ctrl+Alt+Shift+F`; streaming results grouped by file.
+- **QuickPick** — `Ctrl+Alt+F` for a one-shot search dropdown.
 
-- **Streaming results** grouped by file. Each file header shows the filename prominently on its own
-  line with the directory path below. Hover the header to see the full path as a tooltip.
-- **Match highlighting** in every result row. Click a row to open the file at that line.
-- **`Aa`** — case-sensitive toggle (default: case-insensitive).
-- **`.*`** — regular expression toggle (needs a ≥3-character literal run in the pattern).
-- **Max results** dropdown — 50 / 100 / 300 / 1000 / ∞. Changes take effect on the next search.
-- **`···`** — reveals two path-filter fields:
-  - **Files to include** — only show results from matching paths (e.g. `src/`, `*.java`, `delivery/**/*.java`).
-  - **Files to exclude** — hide results from matching paths (e.g. `*.min.js`, `test/`).
-  - Both accept glob patterns (`*` = within a segment, `**` = across segments, `?` = single char);
-    plain text without wildcards is treated as a substring of the path.
-  - Filters are applied client-side: no re-search is triggered when you change them.
-
-### QuickPick
-
-Press **`Ctrl+Alt+F`** for a lightweight one-shot search. Results stream into a filterable dropdown;
-press Enter to open the selected file.
-
-| Command | Keybinding | Description |
-| --- | --- | --- |
-| **loupe: Search (substring)** | `Ctrl+Alt+F` | QuickPick — substring search |
-| **loupe: Search (regex)** | — | QuickPick — regex search |
-| **loupe: Focus Search View** | `Ctrl+Alt+Shift+F` | Focus the sidebar search panel |
-| **loupe: Build / rebuild index** | — | Full (re)build |
-
-VS Code settings cover only the editor side — `loupe.indexDir`, `loupe.binaryPath`,
-`loupe.maxResults`. **Roots and encodings are not VS Code settings**; they live in
-`settings.json` so the CLI, MCP server, and extension stay in agreement.
+Full usage, screenshots, commands, and VS Code settings are documented in [`vscode/README.md`](vscode/README.md) (also shown on the Marketplace page).
 
 ## ⚙️ Configuration — `settings.json`
 

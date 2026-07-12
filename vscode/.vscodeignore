@@ -11,3 +11,4 @@ esbuild.js
 .vscode-test/**
 **/.eslintrc*
 *.vsix
+scripts/**

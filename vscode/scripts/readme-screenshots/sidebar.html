@@ -1,0 +1,85 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <title>loupe sidebar screenshot</title>
+  <link rel="stylesheet" href="theme.css" />
+  <link rel="stylesheet" href="../../media/searchView.css" />
+  <style>
+    body { width: 380px; min-height: 520px; }
+    .frame-label {
+      font: 11px var(--vscode-font-family);
+      color: var(--vscode-descriptionForeground);
+      padding: 6px 8px 0;
+    }
+  </style>
+</head>
+<body data-root="/demo" data-max="300">
+  <div class="frame-label">Search</div>
+  <div class="toolbar">
+    <div class="toolbar-row">
+      <div class="inputwrap">
+        <input id="q" type="text" value="calcTotal" autocomplete="off" spellcheck="false" />
+        <button class="iconbtn toggle" title="Match Case">Aa</button>
+        <button class="iconbtn toggle" title="Use Regular Expression">.*</button>
+      </div>
+    </div>
+    <div class="toolbar-row toolbar-row--between">
+      <button class="max-btn">max 300 ▾</button>
+      <button class="iconbtn toggle" title="Toggle path filters">···</button>
+    </div>
+  </div>
+  <div class="status">12 results in 4 files</div>
+  <div class="results">
+    <div class="group">
+      <div class="group-header" title="src/billing/invoice.ts">
+        <div class="group-header-line1">
+          <span class="twisty">▾</span>
+          <span class="fname">invoice.ts</span>
+        </div>
+        <div class="group-header-line2">
+          <span class="fdir">src/billing</span>
+          <span class="fcount">3</span>
+        </div>
+      </div>
+      <div class="rows">
+        <div class="row"><span class="ln">42</span><span class="txt">export function <span class="hl">calcTotal</span>(items: LineItem[]): number {</span></div>
+        <div class="row"><span class="ln">58</span><span class="txt">  const subtotal = <span class="hl">calcTotal</span>(items);</span></div>
+        <div class="row"><span class="ln">91</span><span class="txt">/** Returns tax-inclusive <span class="hl">calcTotal</span> for display. */</span></div>
+      </div>
+    </div>
+    <div class="group">
+      <div class="group-header" title="src/api/handlers.ts">
+        <div class="group-header-line1">
+          <span class="twisty">▾</span>
+          <span class="fname">handlers.ts</span>
+        </div>
+        <div class="group-header-line2">
+          <span class="fdir">src/api</span>
+          <span class="fcount">2</span>
+        </div>
+      </div>
+      <div class="rows">
+        <div class="row"><span class="ln">17</span><span class="txt">import { <span class="hl">calcTotal</span> } from '../billing/invoice';</span></div>
+        <div class="row"><span class="ln">103</span><span class="txt">    total: <span class="hl">calcTotal</span>(body.items),</span></div>
+      </div>
+    </div>
+    <div class="group">
+      <div class="group-header" title="tests/billing.test.ts">
+        <div class="group-header-line1">
+          <span class="twisty">▾</span>
+          <span class="fname">billing.test.ts</span>
+        </div>
+        <div class="group-header-line2">
+          <span class="fdir">tests</span>
+          <span class="fcount">2</span>
+        </div>
+      </div>
+      <div class="rows">
+        <div class="row"><span class="ln">8</span><span class="txt">  it('sums line items via <span class="hl">calcTotal</span>', () => {</span></div>
+        <div class="row"><span class="ln">11</span><span class="txt">    expect(<span class="hl">calcTotal</span>(items)).toBe(1500);</span></div>
+      </div>
+    </div>
+  </div>
+</body>
+</html>
