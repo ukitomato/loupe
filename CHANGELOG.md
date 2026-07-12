@@ -7,7 +7,7 @@
 - **indexify → loupe.** The binary, VS Code extension, index directory (`.loupe/`), VS Code settings
   keys (`loupe.*`), and documentation now use the **loupe** name consistently.
 - **Marketplace id `ukitomato.loupe-search`.** The extension package name is `loupe-search` (display
-  name remains **loupe**) because the short name `loupe` is already taken on the Marketplace.
+  name **Loupe Search**) because the short name `loupe` is already taken on the Marketplace.
 
 ### CLI / core
 
