@@ -19,7 +19,7 @@ jobs:
         os: [ubuntu-latest, windows-latest]
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: dtolnay/rust-toolchain@stable
         with:
@@ -54,7 +54,7 @@ jobs:
             bin_dir: win32-x64
 
     steps:
-      - uses: actions/checkout@v4
+      - uses: actions/checkout@v6
 
       - uses: dtolnay/rust-toolchain@stable
 
@@ -78,9 +78,9 @@ jobs:
           New-Item -ItemType Directory -Force -Path vscode/bin/${{ matrix.bin_dir }}
           Copy-Item target/release/loupe.exe vscode/bin/${{ matrix.bin_dir }}/loupe.exe
 
-      - uses: actions/setup-node@v4
+      - uses: actions/setup-node@v6
         with:
-          node-version: 20
+          node-version: 24
           cache: npm
           cache-dependency-path: vscode/package-lock.json
 
