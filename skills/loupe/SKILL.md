@@ -35,4 +35,4 @@ allowed-tools: Bash
 |---|---|
 | `command not found: loupe` | `LOUPE_BIN` に実行ファイルのパスをセットする、またはユーザーに確認する |
 | `no index` / `index_not_found` | ユーザーに `loupe build` の実行を依頼する |
-| `LockBusy`（旧版） | v0.3.1 以降は自動で read-only にフォールバックするためこのエラーは出ない |
+| `LockBusy`（旧版） | v0.4.0 以降は自動で read-only にフォールバックするためこのエラーは出ない |

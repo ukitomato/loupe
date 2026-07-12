@@ -2,7 +2,7 @@
   "name": "loupe",
   "displayName": "loupe",
   "description": "Fast indexed full-text code search. A Rust (Tantivy) binary keeps a compact trigram index, decoding UTF-8, Shift_JIS and EUC-JP per folder, and updates incrementally as files change. Substring & regex, native, no Docker. Shines on large or multi-encoding codebases (e.g. a monorepo of many repos). One index is shared with the loupe CLI and MCP server.",
-  "version": "0.3.0",
+  "version": "0.4.0",
   "publisher": "ukitomato",
   "license": "MIT",
   "engines": { "vscode": "^1.75.0" },

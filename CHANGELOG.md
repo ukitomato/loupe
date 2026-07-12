@@ -1,5 +1,19 @@
 # Changelog
 
+## 0.4.0
+
+### Rename
+
+- **indexify → loupe.** The binary, VS Code extension, index directory (`.loupe/`), VS Code settings
+  keys (`loupe.*`), and documentation now use the **loupe** name consistently.
+
+### CLI / core
+
+- **Read-only mode when the index is locked.** If another process (e.g. `loupe serve`) holds the
+  Tantivy writer lock, `loupe search` and the MCP server open the index read-only and continue
+  serving searches instead of failing with `LockBusy`. Build/sync remain unavailable until the
+  writer is released.
+
 ## 0.3.0
 
 ### CLI / core
