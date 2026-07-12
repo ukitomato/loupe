@@ -7,7 +7,7 @@ import * as vscode from 'vscode';
 
 suite('Extension activation', () => {
   suiteSetup(async () => {
-    const ext = vscode.extensions.getExtension('ukitomato.loupe');
+    const ext = vscode.extensions.getExtension('ukitomato.loupe-search');
     if (ext && !ext.isActive) {
       await ext.activate();
     }

@@ -41,7 +41,7 @@ features:
 
 ## VS Code Extension
 
-Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=ukitomato.loupe) — or grab a `.vsix` from [GitHub Releases](https://github.com/ukitomato/loupe/releases).
+Install from the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=ukitomato.loupe-search) — or grab a `.vsix` from [GitHub Releases](https://github.com/ukitomato/loupe/releases).
 
 The extension ships **two search UIs** that share the same index as the CLI and MCP server, updated automatically in the background.
 

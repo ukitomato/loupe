@@ -94,11 +94,41 @@ jobs:
             "vscode/loupe-${{ matrix.code_target }}-${{ steps.tag.outputs.tag }}.vsix" \
             --repo "$GITHUB_REPOSITORY" --clobber
 
+  publish:
+    needs: vsix
+    if: ${{ needs.vsix.result == 'success' }}
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Resolve tag
+        id: tag
+        run: |
+          if [ "${{ github.event_name }}" = "workflow_dispatch" ]; then
+            echo "tag=${{ inputs.tag }}" >> "$GITHUB_OUTPUT"
+          else
+            echo "tag=${{ github.event.workflow_run.head_branch }}" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Download platform vsix files from the Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        run: |
+          set -euo pipefail
+          mkdir -p vsix
+          gh release download "${{ steps.tag.outputs.tag }}" \
+            --repo "$GITHUB_REPOSITORY" \
+            --pattern "loupe-*-${{ steps.tag.outputs.tag }}.vsix" \
+            --dir vsix
+          ls -l vsix
+
       - name: Publish to VS Code Marketplace
-        working-directory: vscode
         env:
           VSCE_PAT: ${{ secrets.VSCE_PAT }}
         run: |
           set -euo pipefail
           npx --yes @vscode/vsce publish \
-            --packagePath "loupe-${{ matrix.code_target }}-${{ steps.tag.outputs.tag }}.vsix"
+            --packagePath vsix/*.vsix \
+            --skip-duplicate

@@ -6,7 +6,7 @@ The loupe VS Code extension provides two search UIs that share the same index as
 
 ## Install
 
-The extension is published on the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=ukitomato.loupe).
+The extension is published on the [VS Code Marketplace](https://marketplace.visualstudio.com/items?itemName=ukitomato.loupe-search).
 
 You can also install a `.vsix` directly from the [GitHub Releases page](https://github.com/ukitomato/loupe/releases).
 
